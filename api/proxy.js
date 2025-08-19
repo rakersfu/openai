@@ -1,32 +1,46 @@
 export default async function handler(req, res) {
   try {
-    const { method, url, headers, body } = req;
+    const { method, url } = req;
 
-    // 从查询参数里获取路径，比如 /api/proxy?path=/chat/completions
-    const { searchParams } = new URL(req.url, `http://${req.headers.host}`);
-    const path = searchParams.get("path");
-    if (!path) {
-      return res.status(400).json({ error: "Missing 'path' query parameter" });
+    // 从 /api/... 提取路径，比如 /api/chat/completions → /chat/completions
+    const apiPath = url.replace(/^\/api/, "");
+
+    if (!apiPath || apiPath === "/") {
+      return res.status(400).json({ error: "Missing API path" });
     }
 
-    // 拼接 OpenAI API 完整 URL
-    const apiUrl = `https://api.openai.com/v1${path}`;
+    // 解析请求体（POST/PUT）
+    let body;
+    if (method !== "GET") {
+      body = await new Promise((resolve, reject) => {
+        let data = "";
+        req.on("data", (chunk) => (data += chunk));
+        req.on("end", () => {
+          try {
+            resolve(JSON.parse(data || "{}"));
+          } catch (err) {
+            reject(err);
+          }
+        });
+      });
+    }
 
-    // 转发请求
-    const response = await fetch(apiUrl, {
+    // 转发到 OpenAI
+    const response = await fetch(`https://api.openai.com/v1${apiPath}`, {
       method,
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: method === "GET" ? undefined : JSON.stringify(body),
     });
 
-    // 保持原样返回结果
-    const data = await response.json();
-    res.status(response.status).json(data);
-  } catch (error) {
-    console.error(error);
+    // 原样返回
+    const text = await response.text();
+    res.status(response.status).send(text);
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Internal server error" });
   }
 }
+
