@@ -1,3 +1,5 @@
 {
-  "version": 2
+  "routes": [
+    { "src": "/(.*)", "dest": "/api/vercel_index.js" }
+  ]
 }
