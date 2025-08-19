@@ -1,9 +1,5 @@
 {
-  "name": "openai-vercel-proxy",
-  "version": "1.0.0",
-  "description": "A simple Vercel proxy for OpenAI API",
-  "scripts": {
-    "dev": "vercel dev"
-  },
-  "license": "MIT"
+  "devDependencies": {
+    "wrangler": "^4.23.0"
+  }
 }
